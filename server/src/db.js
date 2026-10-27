@@ -5,20 +5,54 @@ import { config } from './config.js';
 
 let pool;
 
-export function normalizeDatabaseUrl(url) {
-  if (!url) return url;
-  let s = String(url).trim().replace(/^["']|["']$/g, '');
+export function parsePgConfig(raw) {
+  if (!raw) return null;
+  let s = String(raw).trim().replace(/^["']|["']$/g, '');
   if (s.startsWith('psql ')) s = s.replace(/^psql\s+["']?/, '').replace(/["']?$/, '');
-  const m = s.match(/^(postgres(?:ql)?:\/\/)([^:]+):(.*)@([^@/:]+)(?::(\d+))?(\/.*)?$/);
-  if (m) {
-    let [, proto, user, pass, host, port, rest] = m;
-    if (pass.startsWith('[') && pass.endsWith(']')) pass = pass.slice(1, -1);
-    let decodedPass = pass;
-    try { decodedPass = decodeURIComponent(pass); } catch {}
-    const encodedPass = encodeURIComponent(decodedPass);
-    return proto + user + ':' + encodedPass + '@' + host + (port ? ':' + port : '') + (rest || '');
+  if (s.startsWith('DATABASE_URL=')) s = s.replace(/^DATABASE_URL=/, '').trim();
+  s = s.replace(/^(postgres(?:ql)?:\/\/)/i, '');
+
+  const atIdx = s.lastIndexOf('@');
+  if (atIdx === -1) {
+    return { host: s, database: 'postgres', port: 5432 };
   }
-  return s;
+
+  const userPass = s.slice(0, atIdx);
+  const hostPortDb = s.slice(atIdx + 1);
+
+  const colonIdx = userPass.indexOf(':');
+  const user = colonIdx !== -1 ? userPass.slice(0, colonIdx) : userPass;
+  let password = colonIdx !== -1 ? userPass.slice(colonIdx + 1) : '';
+  if (password.startsWith('[') && password.endsWith(']')) {
+    password = password.slice(1, -1);
+  }
+
+  const slashIdx = hostPortDb.indexOf('/');
+  const hostPort = slashIdx !== -1 ? hostPortDb.slice(0, slashIdx) : hostPortDb;
+  let database = slashIdx !== -1 ? hostPortDb.slice(slashIdx + 1) : 'postgres';
+  if (database.includes('?')) database = database.slice(0, database.indexOf('?'));
+
+  const [host, portStr] = hostPort.split(':');
+  const port = portStr ? parseInt(portStr, 10) : 5432;
+
+  let finalUser = user;
+  let finalPassword = password;
+  try { finalUser = decodeURIComponent(user); } catch {}
+  try { finalPassword = decodeURIComponent(password); } catch {}
+
+  return {
+    user: finalUser,
+    password: finalPassword,
+    host,
+    port,
+    database: database || 'postgres',
+  };
+}
+
+export function normalizeDatabaseUrl(url) {
+  const c = parsePgConfig(url);
+  if (!c || !c.user) return url;
+  return `postgresql://${c.user}:${encodeURIComponent(c.password)}@${c.host}:${c.port}/${c.database}`;
 }
 
 const SCHEMA = [
@@ -69,14 +103,14 @@ const SCHEMA = [
 
 export async function initDb() {
   if (config.databaseUrl) {
-    const connStr = normalizeDatabaseUrl(config.databaseUrl);
-    const isLocal = /localhost|127\.0\.0\.1/.test(connStr);
+    const pgConfig = parsePgConfig(config.databaseUrl);
+    const isLocal = /localhost|127\.0\.0\.1/.test(pgConfig.host || '');
     pool = new pg.Pool({
-      connectionString: connStr,
+      ...pgConfig,
       ssl: isLocal ? false : { rejectUnauthorized: false },
       max: 5,
     });
-    console.log('[db] using Postgres from DATABASE_URL');
+    console.log(`[db] connecting to Postgres at ${pgConfig.host}:${pgConfig.port}/${pgConfig.database} as ${pgConfig.user}`);
   } else {
     const { newDb } = await import('pg-mem');
     const mem = newDb();
