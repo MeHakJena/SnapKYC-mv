@@ -1,0 +1,36 @@
+# Render Blueprint: one free web service that serves the API, the video-call
+# signaling (WebSockets) and the built React app from a single HTTPS URL.
+# Values marked sync: false are typed into the Render dashboard, never committed.
+services:
+  - type: web
+    name: snapkyc-video
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: AUTH_JWT_SECRET
+        generateValue: true
+      - key: KYC_TOKEN_SECRET
+        generateValue: true
+      - key: MOCK_SNAPKYC_KEY
+        generateValue: true
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: kyc-media
+      - key: METERED_DOMAIN
+        sync: false
+      - key: METERED_API_KEY
+        sync: false

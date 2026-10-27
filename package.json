@@ -1,0 +1,13 @@
+{
+  "name": "snapkyc-video",
+  "private": true,
+  "description": "Video KYC proof of concept: live call, maker-checker approval, signed KYC token",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "test": "npm --prefix server test",
+    "build": "npm --prefix server ci && npm --prefix client ci --include=dev && npm --prefix client run build",
+    "start": "npm --prefix server start"
+  }
+}
