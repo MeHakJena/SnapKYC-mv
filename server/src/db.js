@@ -10,7 +10,7 @@ export function parsePgConfig(raw) {
   let s = String(raw).trim().replace(/^["']|["']$/g, '');
   if (s.startsWith('psql ')) s = s.replace(/^psql\s+["']?/, '').replace(/["']?$/, '');
   if (s.startsWith('DATABASE_URL=')) s = s.replace(/^DATABASE_URL=/, '').trim();
-  s = s.replace(/^(postgres(?:ql)?:\/\/)/i, '');
+  s = s.replace(/^[a-z0-9_+-]+:\/\//i, '');
 
   const atIdx = s.lastIndexOf('@');
   if (atIdx === -1) {
