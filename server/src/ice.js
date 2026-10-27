@@ -1,0 +1,32 @@
+// ICE servers for WebRTC. STUN finds each browser's public address; TURN relays
+// the video when a direct connection is blocked (different networks, strict NAT).
+import { config } from './config.js';
+
+const STUN = { urls: ['stun:stun.l.google.com:19302', 'stun:stun.relay.metered.ca:80'] };
+let cache = { at: 0, servers: null };
+
+export async function getIceServers() {
+  const t = config.turn;
+
+  // Option A: Metered — fetch short-lived TURN credentials with the API key (cached for 1 hour).
+  if (t.meteredDomain && t.meteredApiKey) {
+    if (cache.servers && Date.now() - cache.at < 60 * 60 * 1000) return cache.servers;
+    try {
+      const r = await fetch(`https://${t.meteredDomain}/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.meteredApiKey)}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const servers = await r.json();
+      cache = { at: Date.now(), servers: [STUN, ...servers] };
+      return cache.servers;
+    } catch (err) {
+      console.warn('[ice] could not fetch Metered TURN credentials:', err.message);
+    }
+  }
+
+  // Option B: static TURN credentials from env.
+  if (t.urls && t.username && t.credential) {
+    return [STUN, { urls: t.urls.split(',').map((u) => u.trim()), username: t.username, credential: t.credential }];
+  }
+
+  // No TURN: works on the same network, may fail across networks.
+  return [STUN];
+}
