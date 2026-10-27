@@ -5,6 +5,22 @@ import { config } from './config.js';
 
 let pool;
 
+export function normalizeDatabaseUrl(url) {
+  if (!url) return url;
+  let s = String(url).trim().replace(/^["']|["']$/g, '');
+  if (s.startsWith('psql ')) s = s.replace(/^psql\s+["']?/, '').replace(/["']?$/, '');
+  const m = s.match(/^(postgres(?:ql)?:\/\/)([^:]+):(.*)@([^@/:]+)(?::(\d+))?(\/.*)?$/);
+  if (m) {
+    let [, proto, user, pass, host, port, rest] = m;
+    if (pass.startsWith('[') && pass.endsWith(']')) pass = pass.slice(1, -1);
+    let decodedPass = pass;
+    try { decodedPass = decodeURIComponent(pass); } catch {}
+    const encodedPass = encodeURIComponent(decodedPass);
+    return proto + user + ':' + encodedPass + '@' + host + (port ? ':' + port : '') + (rest || '');
+  }
+  return s;
+}
+
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
@@ -53,9 +69,10 @@ const SCHEMA = [
 
 export async function initDb() {
   if (config.databaseUrl) {
-    const isLocal = /localhost|127\.0\.0\.1/.test(config.databaseUrl);
+    const connStr = normalizeDatabaseUrl(config.databaseUrl);
+    const isLocal = /localhost|127\.0\.0\.1/.test(connStr);
     pool = new pg.Pool({
-      connectionString: config.databaseUrl,
+      connectionString: connStr,
       ssl: isLocal ? false : { rejectUnauthorized: false },
       max: 5,
     });

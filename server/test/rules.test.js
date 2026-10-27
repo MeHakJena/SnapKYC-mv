@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { canDecide, canRecommend, isInIndia, STATUS } from '../src/rules.js';
+import { normalizeDatabaseUrl } from '../src/db.js';
 
 const agent = { id: 'agent1', roles: ['agent'] };
 const reviewer = { id: 'reviewer1', roles: ['reviewer'] };
@@ -43,4 +44,15 @@ test('India location check', () => {
   assert.equal(isInIndia(12.97, 77.59), true); // Bengaluru
   assert.equal(isInIndia(28.41, 77.31), true); // Faridabad
   assert.equal(isInIndia(51.5, -0.12), false); // London
+});
+
+test('normalizeDatabaseUrl safely cleans quotes, brackets and encodes special chars in password', () => {
+  assert.equal(
+    normalizeDatabaseUrl('postgresql://postgres.xxx:[pass#123]@aws-0.pooler.supabase.com:5432/postgres'),
+    'postgresql://postgres.xxx:pass%23123@aws-0.pooler.supabase.com:5432/postgres'
+  );
+  assert.equal(
+    normalizeDatabaseUrl('"postgresql://postgres:pass@host:5432/db"'),
+    'postgresql://postgres:pass@host:5432/db'
+  );
 });
