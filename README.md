@@ -4,8 +4,8 @@ A small proof of concept of RBI-style video KYC (V-CIP): a customer does a live,
 video call with an agent, a **different person** approves it, and the customer gets a signed
 "KYC done" token that anyone can check.
 
-- **Live URL:** `https://<your-app>.onrender.com` *(free tier: the first load after 15 min idle takes ~50 s)*
-- **Demo logins** (password: `<DEMO_PASSWORD>`)
+- **Live URL:** `https://snapkyc-video.onrender.com` *(free tier: the first load after 15 min idle takes ~50 s)*
+- **Demo logins** (password: `demo1234`)
 
 | User | Role | Use it to |
 |---|---|---|
