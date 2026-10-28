@@ -42,7 +42,7 @@ export function createApp() {
   app.post('/api/verify', (req, res) => res.json(checkKycToken(req.body?.token)));
 
   // WebRTC relay settings (needed by both customer and agent).
-  app.get('/api/ice-servers', async (_req, res) => res.json(await getIceServers()));
+  app.get('/api/ice-servers', async (req, res) => res.json(await getIceServers(Boolean(req.query.debug))));
 
   // Local-storage mode only: serve a file through a short-lived signed link.
   app.get('/api/media', async (req, res) => {
