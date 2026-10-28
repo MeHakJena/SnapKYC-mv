@@ -13,6 +13,7 @@ export default function App() {
           <span className="logo">✓</span> SnapKYC <span className="muted">Video</span>
         </NavLink>
         <nav>
+          <NavLink to="/" end>Home</NavLink>
           <NavLink to="/customer">Customer</NavLink>
           <NavLink to="/agent">Agent</NavLink>
           <NavLink to="/reviewer">Reviewer</NavLink>

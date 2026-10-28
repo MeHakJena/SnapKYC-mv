@@ -1,0 +1,504 @@
+/* Home page styles (scoped strictly to .home) */
+
+.home {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #2a3242;
+  background-color: #ffffff;
+  padding-bottom: 24px;
+}
+
+.home h1,
+.home h2,
+.home h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  color: #1d3670;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.home-subtitle {
+  color: #667085;
+  font-size: 1.02rem;
+  margin-top: 4px;
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+/* ----------------------------------------------------
+   a) Hero Section
+   ---------------------------------------------------- */
+.home-hero {
+  background-color: #eaf2fd;
+  border: 1px solid #d6e4f8;
+  border-radius: 16px;
+  padding: 44px 40px;
+  margin-bottom: 48px;
+  display: grid;
+  grid-template-columns: 1.25fr 0.95fr;
+  gap: 36px;
+  align-items: center;
+}
+
+.home-hero-text h1 {
+  font-size: 2.25rem;
+  margin: 0 0 16px 0;
+  color: #1d3670;
+}
+
+.home-hero-description {
+  color: #2a3242;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin: 0 0 28px 0;
+}
+
+.home-hero-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.home-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f6b94a;
+  color: #1d3670;
+  font-weight: 700;
+  font-size: 0.98rem;
+  padding: 12px 24px;
+  border-radius: 10px;
+  text-decoration: none;
+  border: 1px solid #eab042;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(246, 185, 74, 0.25);
+}
+
+.home-btn-primary:hover {
+  background-color: #f0a830;
+  color: #1d3670;
+  transform: translateY(-1px);
+}
+
+.home-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  color: #1d3670;
+  font-weight: 600;
+  font-size: 0.98rem;
+  padding: 12px 22px;
+  border-radius: 10px;
+  text-decoration: none;
+  border: 1.5px solid #1d3670;
+  transition: all 0.2s ease;
+}
+
+.home-btn-outline:hover {
+  background-color: #f4f8fe;
+  color: #1d3670;
+}
+
+/* Hero Sample Token Card */
+.home-hero-card-col {
+  display: flex;
+  justify-content: center;
+}
+
+.home-token-card {
+  background-color: #ffffff;
+  border-radius: 14px;
+  border-top: 5px solid #f6b94a;
+  border-left: 1px solid #e2eaf4;
+  border-right: 1px solid #e2eaf4;
+  border-bottom: 1px solid #e2eaf4;
+  box-shadow: 0 10px 30px rgba(29, 54, 112, 0.08);
+  padding: 24px 26px;
+  width: 100%;
+  max-width: 360px;
+  transform: rotate(1.5deg);
+  transition: transform 0.3s ease;
+}
+
+.home-token-card:hover {
+  transform: rotate(0deg) translateY(-2px);
+}
+
+.home-token-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed #e5ecf6;
+}
+
+.home-token-tick {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e6f6f4;
+  color: #1a8a80;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.home-token-title {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #1d3670;
+}
+
+.home-token-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 0.8rem;
+  color: #1a8a80;
+  font-weight: 600;
+}
+
+.home-token-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.86rem;
+}
+
+.home-token-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-token-label {
+  color: #667085;
+}
+
+.home-token-val {
+  color: #1d3670;
+  font-weight: 600;
+  text-align: right;
+}
+
+.home-token-jwt-box {
+  margin-top: 14px;
+  padding: 8px 10px;
+  background-color: #f7f9fc;
+  border-radius: 6px;
+  border: 1px solid #edf2f9;
+}
+
+.home-token-jwt {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.72rem;
+  color: #667085;
+  word-break: break-all;
+  display: block;
+  line-height: 1.35;
+}
+
+.home-token-caption {
+  font-size: 0.74rem;
+  color: #8b95a5;
+  text-align: center;
+  margin: 10px 0 0 0;
+}
+
+/* ----------------------------------------------------
+   b) How a Session Moves
+   ---------------------------------------------------- */
+.home-section {
+  margin-bottom: 48px;
+}
+
+.home-section-title {
+  font-size: 1.65rem;
+  margin: 0;
+  color: #1d3670;
+}
+
+.home-steps-container {
+  position: relative;
+  margin: 24px 0 16px 0;
+}
+
+.home-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  position: relative;
+}
+
+.home-steps-line {
+  position: absolute;
+  top: 24px;
+  left: 30px;
+  right: 30px;
+  height: 2px;
+  background-color: #c7d7f0;
+  z-index: 1;
+}
+
+.home-step-item {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.home-step-circle-wrapper {
+  margin-bottom: 14px;
+}
+
+.home-step-num {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 2px solid #c7d7f0;
+  color: #1d3670;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.home-step-item.is-gate .home-step-num {
+  background-color: #f6b94a;
+  border-color: #f6b94a;
+  color: #1d3670;
+  box-shadow: 0 0 0 6px #fdf0d4;
+}
+
+.home-gate-tag {
+  display: inline-block;
+  background-color: #fdf0d4;
+  color: #b27300;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.home-step-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #1d3670;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.home-step-actor {
+  color: #1a8a80;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.home-step-desc {
+  color: #5a6477;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.home-steps-note {
+  background-color: #f4f7fb;
+  border-left: 3px solid #1a8a80;
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.88rem;
+  color: #4a5468;
+  margin-top: 14px;
+}
+
+/* ----------------------------------------------------
+   c) Pick Your Role (2x2 grid)
+   ---------------------------------------------------- */
+.home-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.home-role-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px 24px;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.home-role-card:hover {
+  border-color: #c0d3ee;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(29, 54, 112, 0.06);
+}
+
+.home-role-top {
+  margin-bottom: 16px;
+}
+
+.home-role-title {
+  font-size: 1.15rem;
+  color: #1d3670;
+  margin: 0 0 6px 0;
+  font-weight: 700;
+}
+
+.home-role-desc {
+  font-size: 0.92rem;
+  color: #5a6477;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.home-role-link {
+  color: #1d3670;
+  font-weight: 600;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-role-card:hover .home-role-link {
+  color: #127c74;
+}
+
+/* ----------------------------------------------------
+   d) Built Around RBI's Five V-CIP Rules (Light mint box)
+   ---------------------------------------------------- */
+.home-rules-box {
+  background-color: #eef8f5;
+  border: 1px solid #d2ede5;
+  border-radius: 16px;
+  padding: 36px 36px;
+  margin-bottom: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 36px;
+}
+
+.home-rules-left h2 {
+  font-size: 1.6rem;
+  margin: 0 0 10px 0;
+  color: #1d3670;
+}
+
+.home-rules-left p {
+  color: #5a6477;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.home-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home-rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.home-rule-bullet {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #1a8a80;
+  margin-top: 7px;
+  flex-shrink: 0;
+}
+
+.home-rule-text {
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: #2a3242;
+}
+
+.home-rule-title {
+  font-weight: 700;
+  color: #1d3670;
+}
+
+/* ----------------------------------------------------
+   e) What is Mocked Note (Soft cream-yellow box)
+   ---------------------------------------------------- */
+.home-mock-note {
+  background-color: #fff6e0;
+  border: 1px solid #fae6b8;
+  border-radius: 12px;
+  padding: 18px 22px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #533f03;
+}
+
+.home-mock-note strong {
+  color: #3d2e00;
+}
+
+/* ----------------------------------------------------
+   Mobile Responsiveness (under 820px)
+   ---------------------------------------------------- */
+@media (max-width: 820px) {
+  .home-hero {
+    grid-template-columns: 1fr;
+    padding: 28px 20px;
+    gap: 28px;
+  }
+
+  .home-hero-text h1 {
+    font-size: 1.75rem;
+  }
+
+  .home-steps-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .home-steps-line {
+    display: none;
+  }
+
+  .home-step-item {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .home-step-circle-wrapper {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .home-roles-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-rules-box {
+    grid-template-columns: 1fr;
+    padding: 26px 20px;
+    gap: 24px;
+  }
+}
