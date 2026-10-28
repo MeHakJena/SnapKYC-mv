@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, fmtTime } from '../lib/api.js';
 import { getCamera, startCall, stopStream } from '../lib/call.js';
 import { startRecording, captureSnapshot } from '../lib/recorder.js';
-import { StreamVideo, ErrorBox, LoginForm, StaffBar, useStaffLogin } from '../components/common.jsx';
+import { StreamVideo, ErrorBox, LoginForm, StaffBar, useStaffLogin, CallControlsBar, IncomingCallBanner, IconPhoneCall } from '../components/common.jsx';
 
 export default function Agent() {
   const { auth, login, logout } = useStaffLogin('agent');
@@ -50,12 +50,25 @@ function Queue({ auth, onPick }) {
     }
   }
 
+  const waitingCustomer = rows.find((r) => r.status === 'waiting') || rows[0];
+
   return (
     <div className="card">
-      <h2>Customers waiting</h2>
+      <div className="row between">
+        <h2>Customer Queue</h2>
+        <span className="badge badge-waiting">{rows.length} Waiting</span>
+      </div>
       <ErrorBox error={error} />
+
+      {waitingCustomer && (
+        <IncomingCallBanner customer={waitingCustomer} onAccept={pick} />
+      )}
+
       {rows.length === 0 ? (
-        <p className="muted">Nobody is waiting. This list refreshes every few seconds.</p>
+        <div className="empty-queue-box">
+          <div className="pulse-dot" />
+          <p className="muted">Waiting for customers to complete mock SnapKYC and join the queue…</p>
+        </div>
       ) : (
         <table className="table">
           <thead>
@@ -66,9 +79,11 @@ function Queue({ auth, onPick }) {
               <tr key={r.id}>
                 <td>{r.kyc_name}<div className="muted small mono">{r.id.slice(0, 8)}</div></td>
                 <td>{fmtTime(r.updated_at)}</td>
-                <td>{r.status === 'in_call' ? 'Your active call' : 'Waiting'}</td>
+                <td><span className={`badge badge-${r.status}`}>{r.status === 'in_call' ? 'Your active call' : 'Waiting'}</span></td>
                 <td className="right">
-                  <button className="btn primary" onClick={() => pick(r.id)}>{r.status === 'in_call' ? 'Rejoin' : 'Pick up'}</button>
+                  <button className="btn btn-pick-call" onClick={() => pick(r.id)}>
+                    <IconPhoneCall /> {r.status === 'in_call' ? 'Rejoin Call' : 'Pick Up'}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -85,6 +100,8 @@ function CallConsole({ auth, sessionId, onDone }) {
   const [remote, setRemote] = useState(null);
   const [state, setState] = useState('starting');
   const [error, setError] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
   const [snapshotUrl, setSnapshotUrl] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordingSaved, setRecordingSaved] = useState(false);
@@ -96,6 +113,24 @@ function CallConsole({ auth, sessionId, onDone }) {
   const localVideoRef = useRef(null);
   const callRef = useRef(null);
   const recorderRef = useRef(null);
+
+  const toggleMute = () => {
+    if (!local) return;
+    const next = !isMuted;
+    local.getAudioTracks().forEach((track) => {
+      track.enabled = !next;
+    });
+    setIsMuted(next);
+  };
+
+  const toggleVideo = () => {
+    if (!local) return;
+    const next = !isVideoOff;
+    local.getVideoTracks().forEach((track) => {
+      track.enabled = !next;
+    });
+    setIsVideoOff(next);
+  };
 
   const load = useCallback(async () => {
     const s = await api(`/api/agent/sessions/${sessionId}`, { token: auth.token });
@@ -240,22 +275,59 @@ function CallConsole({ auth, sessionId, onDone }) {
           <>
             <div className={`status-line ${state === 'connected' ? 'ok' : ''}`}>
               {recording && <span className="rec-dot" />} {statusText}
-              {recording && <strong className="rec-label">REC</strong>}
+              {recording && <strong className="rec-label">REC ACTIVE</strong>}
             </div>
             <div className="video-stage">
-              {remote ? <StreamVideo stream={remote} videoRef={remoteVideoRef} className="video-main" /> : <div className="video-main placeholder">Customer video will appear here</div>}
-              {local && <StreamVideo stream={local} muted mirrored videoRef={localVideoRef} className="video-pip" />}
+              {remote ? (
+                <StreamVideo stream={remote} videoRef={remoteVideoRef} className="video-main" />
+              ) : (
+                <div className="video-main placeholder">
+                  <div className="pulse-indicator" />
+                  <p>Customer video will appear here when connected</p>
+                </div>
+              )}
+
+              {local && (
+                <div className="video-pip-container">
+                  <StreamVideo stream={local} muted mirrored videoRef={localVideoRef} className={`video-pip ${isVideoOff ? 'pip-hidden' : ''}`} />
+                  {isVideoOff && (
+                    <div className="pip-video-off">
+                      <span>📷 Camera Off</span>
+                    </div>
+                  )}
+                  {isMuted && <span className="pip-mute-badge">🔇 Muted</span>}
+                </div>
+              )}
+
+              <CallControlsBar
+                isMuted={isMuted}
+                onToggleMute={toggleMute}
+                isVideoOff={isVideoOff}
+                onToggleVideo={toggleVideo}
+                onHangUp={() => {
+                  if (!snapshotUrl) {
+                    setError("Please take a face snapshot of the customer before ending the call (required by RBI V-CIP rule).");
+                    return;
+                  }
+                  endCallAndSave();
+                }}
+                hangUpLabel={busy === 'recording' ? 'Saving…' : 'End & Cut Call'}
+                hangUpDisabled={!recording || busy === 'recording'}
+                isAgent={true}
+                onTakeSnapshot={takeSnapshot}
+                snapshotUrl={snapshotUrl}
+                busySnapshot={busy === 'snapshot'}
+                snapshotDisabled={!remote || state !== 'connected'}
+                state={state}
+                recording={recording}
+              />
             </div>
-            <div className="row">
-              <button className="btn" onClick={takeSnapshot} disabled={!remote || state !== 'connected' || busy === 'snapshot'}>
-                {busy === 'snapshot' ? 'Saving…' : snapshotUrl ? 'Retake face snapshot' : 'Take face snapshot'}
-              </button>
-              <button className="btn danger" onClick={endCallAndSave} disabled={!recording || !snapshotUrl || busy === 'recording'}>
-                {busy === 'recording' ? 'Saving recording…' : 'End call & save recording'}
-              </button>
+            <div className="row between call-quick-actions">
+              <span className="muted small">
+                {snapshotUrl ? '✓ Face snapshot captured and stored' : '⚠️ Snapshot required before call can be ended'}
+              </span>
               <button className="btn link" onClick={release}>Return customer to queue</button>
             </div>
-            {!snapshotUrl && <p className="muted small">Take a snapshot of the customer's face before ending the call.</p>}
           </>
         ) : (
           <div className="alert alert-ok">Call ended and recording saved. Now make your recommendation.</div>

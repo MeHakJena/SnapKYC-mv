@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, store } from '../lib/api.js';
 import { getCamera, startCall, stopStream } from '../lib/call.js';
-import { StreamVideo, QrImage, ErrorBox } from '../components/common.jsx';
+import { StreamVideo, QrImage, ErrorBox, CallControlsBar } from '../components/common.jsx';
 
 const KEY = 'snapkyc_customer';
 const DEMO_ID = '9999 0000 1234';
@@ -218,6 +218,8 @@ function CallStep({ saved, onFinished, refresh }) {
   const [remote, setRemote] = useState(null);
   const [state, setState] = useState('starting');
   const [error, setError] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
   const callRef = useRef(null);
 
   useEffect(() => {
@@ -258,6 +260,33 @@ function CallStep({ saved, onFinished, refresh }) {
     return () => clearInterval(t);
   }, [refresh, onFinished]);
 
+  const toggleMute = () => {
+    if (!local) return;
+    const next = !isMuted;
+    local.getAudioTracks().forEach((track) => {
+      track.enabled = !next;
+    });
+    setIsMuted(next);
+  };
+
+  const toggleVideo = () => {
+    if (!local) return;
+    const next = !isVideoOff;
+    local.getVideoTracks().forEach((track) => {
+      track.enabled = !next;
+    });
+    setIsVideoOff(next);
+  };
+
+  const handleHangUp = () => {
+    if (window.confirm('Are you sure you want to hang up / leave this video KYC call?')) {
+      callRef.current?.endCall();
+      callRef.current?.close();
+      stopStream(local);
+      onFinished();
+    }
+  };
+
   const message =
     state === 'connected' ? 'Connected to your KYC officer. This call is being recorded.'
       : state === 'peer-left' ? 'The officer disconnected. Please wait, they may rejoin.'
@@ -265,17 +294,51 @@ function CallStep({ saved, onFinished, refresh }) {
           : remote ? 'Connecting…' : 'Waiting for a KYC officer to join. Please keep this page open.';
 
   return (
-    <div className="card">
-      <h2>Live video call</h2>
+    <div className="card call-card">
+      <div className="row between call-header">
+        <h2>Live Video KYC Call</h2>
+        <span className="badge badge-in_call">V-CIP Session</span>
+      </div>
       <ErrorBox error={error} />
       <div className={`status-line ${state === 'connected' ? 'ok' : ''}`}>
         {state === 'connected' && <span className="rec-dot" />} {message}
       </div>
       <div className="video-stage">
-        {remote ? <StreamVideo stream={remote} className="video-main" /> : <div className="video-main placeholder">Officer video will appear here</div>}
-        {local && <StreamVideo stream={local} muted mirrored className="video-pip" />}
+        {remote ? (
+          <StreamVideo stream={remote} className="video-main" />
+        ) : (
+          <div className="video-main placeholder">
+            <div className="pulse-indicator" />
+            <p>Waiting for the KYC officer to join…</p>
+            <span className="muted small">Your camera is live and ready</span>
+          </div>
+        )}
+
+        {local && (
+          <div className="video-pip-container">
+            <StreamVideo stream={local} muted mirrored className={`video-pip ${isVideoOff ? 'pip-hidden' : ''}`} />
+            {isVideoOff && (
+              <div className="pip-video-off">
+                <span>📷 Camera Off</span>
+              </div>
+            )}
+            {isMuted && <span className="pip-mute-badge">🔇 Muted</span>}
+          </div>
+        )}
+
+        <CallControlsBar
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
+          isVideoOff={isVideoOff}
+          onToggleVideo={toggleVideo}
+          onHangUp={handleHangUp}
+          hangUpLabel="Leave Call"
+          state={state}
+        />
       </div>
-      <p className="muted small">Keep your face clearly visible and your dummy ID card ready. The officer will ask you a few questions.</p>
+      <p className="muted small center">
+        Keep your face clearly visible and your dummy ID card ready. The officer will ask you a few questions.
+      </p>
     </div>
   );
 }
