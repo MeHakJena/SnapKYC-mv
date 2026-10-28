@@ -186,11 +186,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* c) Pick Your Role */}
+      {/* c) Choose where to start */}
       <section className="home-section">
-        <h2 className="home-section-title">Pick your role</h2>
+        <h2 className="home-section-title">Choose where to start</h2>
         <p className="home-subtitle">
-          For a demo on one computer, open each role in its own tab. Staff logins are per tab.
+          Each part of the app is a different person in the KYC. Open them in separate tabs to run the whole flow on one computer.
         </p>
 
         <div className="home-roles-grid">
