@@ -37,8 +37,20 @@ export async function getIceServers(debug = false) {
   }
 
   // Option B: static TURN credentials from env.
-  if (t.urls && t.username && t.credential) {
-    return [STUN, { urls: t.urls.split(',').map((u) => u.trim()), username: t.username, credential: t.credential }];
+  if (t.username && t.credential) {
+    const rawUrls = t.urls
+      ? t.urls.split(',').map((u) => u.trim())
+      : [
+          'turn:global.relay.metered.ca:80',
+          'turn:global.relay.metered.ca:80?transport=tcp',
+          'turn:global.relay.metered.ca:443',
+          'turns:global.relay.metered.ca:443?transport=tcp',
+        ];
+    // Automatically map any dashboard domains (e.g. *.metered.live) to Metered's actual global relay server
+    const normalizedUrls = rawUrls.map((u) =>
+      u.replace(/[a-z0-9_-]+\.metered\.live/i, 'global.relay.metered.ca')
+    );
+    return [STUN, { urls: normalizedUrls, username: t.username, credential: t.credential }];
   }
 
   if (debug) {
