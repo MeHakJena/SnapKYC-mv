@@ -11,9 +11,14 @@ export async function getIceServers() {
   // Option A: Metered — fetch short-lived TURN credentials with the API key (cached for 1 hour).
   if (t.meteredDomain && t.meteredApiKey) {
     if (cache.servers && Date.now() - cache.at < 60 * 60 * 1000) return cache.servers;
+    const domain = t.meteredDomain.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    const apiKey = t.meteredApiKey.trim();
     try {
-      const r = await fetch(`https://${t.meteredDomain}/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.meteredApiKey)}`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const r = await fetch(`https://${domain}/api/v1/turn/credentials?apiKey=${encodeURIComponent(apiKey)}`);
+      if (!r.ok) {
+        const text = await r.text().catch(() => '');
+        throw new Error(`HTTP ${r.status}: ${text}`);
+      }
       const servers = await r.json();
       cache = { at: Date.now(), servers: [STUN, ...servers] };
       return cache.servers;
