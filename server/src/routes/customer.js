@@ -32,7 +32,10 @@ customerRouter.post('/sessions', async (req, res) => {
     return res.status(403).json({ error: 'Video KYC is only available while you are in India.' });
   }
 
-  const place = await placeFromCoords(lat, lng);
+  let place = await placeFromCoords(lat, lng);
+  if (!place && location?.place) {
+    place = String(location.place).slice(0, 200);
+  }
 
   const id = crypto.randomUUID();
   const secret = newCustomerSecret();

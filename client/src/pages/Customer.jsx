@@ -116,7 +116,31 @@ function ConsentStep({ onDone }) {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) return reject(new Error('This browser cannot share location.'));
       navigator.geolocation.getCurrentPosition(
-        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy, capturedAt: new Date(p.timestamp).toISOString() }),
+        async (p) => {
+          let place = null;
+          try {
+            const r = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${p.coords.latitude}&longitude=${p.coords.longitude}&localityLanguage=en`,
+              { signal: AbortSignal.timeout(2500) }
+            );
+            if (r.ok) {
+              const d = await r.json();
+              const city = d.city || d.locality;
+              const state = d.principalSubdivision;
+              const country = d.countryName;
+              const parts = [city, state, country].filter(Boolean);
+              const deduped = parts.filter((part, i) => parts.indexOf(part) === i);
+              if (deduped.length) place = deduped.join(', ');
+            }
+          } catch {}
+          resolve({
+            lat: p.coords.latitude,
+            lng: p.coords.longitude,
+            accuracy: p.coords.accuracy,
+            capturedAt: new Date(p.timestamp).toISOString(),
+            place,
+          });
+        },
         (err) =>
           reject(new Error(err.code === 1 ? 'Location permission was denied. Allow location for this site and try again.' : 'Could not get your location. Try again.')),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
