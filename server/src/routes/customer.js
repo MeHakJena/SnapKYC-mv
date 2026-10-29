@@ -8,6 +8,7 @@ import { newCustomerSecret, hashSecret, customerOwnsSession } from '../auth.js';
 import { STATUS, isInIndia } from '../rules.js';
 import { config } from '../config.js';
 import { isValidDummyId, mockSnapkycResponse, verifySnapkycResponse } from '../mockSnapkyc.js';
+import { placeFromCoords } from '../geocode.js';
 
 export const customerRouter = Router();
 
@@ -31,6 +32,8 @@ customerRouter.post('/sessions', async (req, res) => {
     return res.status(403).json({ error: 'Video KYC is only available while you are in India.' });
   }
 
+  const place = await placeFromCoords(lat, lng);
+
   const id = crypto.randomUUID();
   const secret = newCustomerSecret();
   const now = new Date();
@@ -38,13 +41,13 @@ customerRouter.post('/sessions', async (req, res) => {
 
   await query(
     `INSERT INTO sessions (id, customer_secret_hash, status, consent_text, consent_at,
-       lat, lng, location_accuracy, location_at, in_india, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11)`,
+       lat, lng, location_accuracy, location_at, in_india, location_place, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)`,
     [id, hashSecret(secret), STATUS.CONSENTED, CONSENT_TEXT, now, lat, lng,
-      Number(location?.accuracy) || null, locationAt, inIndia, now]
+      Number(location?.accuracy) || null, locationAt, inIndia, place, now]
   );
   await logEvent(id, 'customer', null, 'consent_given', { text: CONSENT_TEXT });
-  await logEvent(id, 'customer', null, 'location_captured', { lat, lng, accuracy: location?.accuracy, inIndia });
+  await logEvent(id, 'customer', null, 'location_captured', { lat, lng, accuracy: location?.accuracy, inIndia, place });
 
   res.status(201).json({ sessionId: id, secret });
 });

@@ -545,6 +545,13 @@ figcaption { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
 .verdict.ok .verdict-title { color: var(--ok); }
 .verdict.bad .verdict-title { color: var(--bad); }
 
+.place-text {
+  margin-top: 3px;
+  color: var(--text, #1f2838);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
 @media (max-width: 820px) {
   .console { grid-template-columns: 1fr; }
   .timeline li { grid-template-columns: 1fr; gap: 0; }

@@ -66,6 +66,7 @@ export function Timeline({ events }) {
             <div>
               <strong>{ACTION_LABELS[e.action] || e.action}</strong>{' '}
               <span className="muted">by {e.actor_id || e.actor_type}</span>
+              {detail?.place && <div className="muted small">{detail.place}</div>}
               {detail?.reason && <div className="muted small">{detail.reason}</div>}
               {detail?.note && <div className="muted small">Note: {detail.note}</div>}
             </div>

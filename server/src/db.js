@@ -99,6 +99,7 @@ const SCHEMA = [
     detail JSONB,
     created_at TIMESTAMPTZ NOT NULL
   )`,
+  `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS location_place TEXT`,
 ];
 
 export async function initDb() {

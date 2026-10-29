@@ -472,8 +472,11 @@ function CallConsole({ auth, sessionId, onDone }) {
             <dt>ID</dt><dd>XXXX XXXX {p.idLast4}</dd>
             <dt>Location</dt>
             <dd>
-              {info.location.lat.toFixed(4)}, {info.location.lng.toFixed(4)}{' '}
-              <span className={`badge ${info.location.inIndia ? 'badge-approved' : 'badge-rejected'}`}>{info.location.inIndia ? 'In India' : 'Outside India'}</span>
+              <div>
+                {info.location.lat.toFixed(4)}, {info.location.lng.toFixed(4)}{' '}
+                <span className={`badge ${info.location.inIndia ? 'badge-approved' : 'badge-rejected'}`}>{info.location.inIndia ? 'In India' : 'Outside India'}</span>
+              </div>
+              {info.location.place && <div className="place-text">{info.location.place}</div>}
             </dd>
             <dt>Consent</dt><dd>{fmtTime(info.consent.at)}</dd>
           </dl>

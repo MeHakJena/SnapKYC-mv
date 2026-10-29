@@ -156,8 +156,11 @@ function ReviewDetail({ auth, sessionId, onBack }) {
             <dt>ID</dt><dd>XXXX XXXX {p.idLast4}</dd>
             <dt>Location</dt>
             <dd>
-              {s.location.lat.toFixed(4)}, {s.location.lng.toFixed(4)}{' '}
-              <span className={`badge ${s.location.inIndia ? 'badge-approved' : 'badge-rejected'}`}>{s.location.inIndia ? 'In India' : 'Outside India'}</span>
+              <div>
+                {s.location.lat.toFixed(4)}, {s.location.lng.toFixed(4)}{' '}
+                <span className={`badge ${s.location.inIndia ? 'badge-approved' : 'badge-rejected'}`}>{s.location.inIndia ? 'In India' : 'Outside India'}</span>
+              </div>
+              {s.location.place && <div className="place-text">{s.location.place}</div>}
             </dd>
             <dt>Consent</dt><dd>{fmtTime(s.consent.at)}</dd>
             <dt>Questions</dt><dd>{s.questions.join(' · ')}</dd>

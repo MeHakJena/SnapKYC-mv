@@ -100,6 +100,7 @@ Frontend on Vercel instead: deploy `client/` with `VITE_API_URL=<render url>` an
 - **Recording happens in the agent's browser**: if the agent's tab crashes mid-call the recording is lost.
 - **No face match** (nice-to-have not done): the reviewer compares the snapshot and photo by eye.
 - **TURN credentials are static in this deployment**: production would use Metered's API mode for short-lived credentials.
+- **Place names come from OpenStreetMap Nominatim reverse geocoding** (free, rate-limited); if the lookup fails, only the coordinates are shown. The India rule itself still uses the coordinates.
 
 ## Changes after first build
 

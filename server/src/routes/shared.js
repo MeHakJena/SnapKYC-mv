@@ -9,7 +9,7 @@ export async function sessionForStaff(s, base) {
     id: s.id,
     status: s.status,
     consent: { text: s.consent_text, at: s.consent_at },
-    location: { lat: s.lat, lng: s.lng, accuracy: s.location_accuracy, at: s.location_at, inIndia: s.in_india },
+    location: { lat: s.lat, lng: s.lng, accuracy: s.location_accuracy, at: s.location_at, inIndia: s.in_india, place: s.location_place },
     profile: { name: s.kyc_name, dob: s.kyc_dob, photo: s.kyc_photo, idLast4: s.id_last4, ref: s.snapkyc_ref },
     agentId: s.agent_id,
     questions: typeof s.questions === 'string' ? JSON.parse(s.questions) : s.questions || [],
