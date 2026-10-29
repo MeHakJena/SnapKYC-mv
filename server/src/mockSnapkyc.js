@@ -7,7 +7,7 @@
 import crypto from 'node:crypto';
 import { config } from './config.js';
 
-const NAMES = ['Ananya Sharma', 'Rohan Mehta', 'Priya Nair', 'Arjun Rao', 'Kavya Iyer', 'Vikram Singh'];
+const NAMES = ['Ananya Sharma', 'Mehak J', 'Priya Nair', 'Arjun Rao', 'Kavya Iyer', 'Vikram Singh'];
 const COLORS = ['#3b5bdb', '#0b7285', '#5f3dc4', '#c2255c', '#2b8a3e', '#e8590c'];
 
 function placeholderPhoto(name, color) {
