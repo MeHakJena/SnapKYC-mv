@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, fmtTime } from '../lib/api.js';
 import { getCamera, startCall, stopStream } from '../lib/call.js';
 import { startRecording, captureSnapshot } from '../lib/recorder.js';
-import { StreamVideo, ErrorBox, LoginForm, StaffBar, useStaffLogin, CallControlsBar, IncomingCallBanner, IconPhoneCall } from '../components/common.jsx';
+import { StreamVideo, ErrorBox, LoginForm, StaffBar, useStaffLogin, CallControlsBar, IncomingCallPopup, IconPhoneCall } from '../components/common.jsx';
 
 export default function Agent() {
   const { auth, login, logout } = useStaffLogin('agent');
@@ -26,13 +26,42 @@ export default function Agent() {
 function Queue({ auth, onPick }) {
   const [rows, setRows] = useState([]);
   const [error, setError] = useState('');
+  const [incomingCall, setIncomingCall] = useState(null);
+  const seenIdsRef = useRef(new Set());
 
   useEffect(() => {
     let alive = true;
-    const load = () =>
-      api('/api/agent/queue', { token: auth.token })
-        .then((r) => alive && (setRows(r), setError('')))
-        .catch((e) => alive && setError(e.message));
+    const load = async () => {
+      try {
+        const newRows = await api('/api/agent/queue', { token: auth.token });
+        if (!alive) return;
+        setRows(newRows);
+        setError('');
+
+        // Dismiss popup if customer is no longer waiting
+        setIncomingCall((current) => {
+          if (!current) return null;
+          const stillWaiting = newRows.some((r) => r.id === current.id && r.status === 'waiting');
+          return stillWaiting ? current : null;
+        });
+
+        // Track non-waiting or in_call rows so they never trigger popups
+        newRows.forEach((r) => {
+          if (r.status !== 'waiting') seenIdsRef.current.add(r.id);
+        });
+
+        // Trigger popup only for a NEW customer with status 'waiting'
+        const newWaiting = newRows.find(
+          (r) => r.status === 'waiting' && !seenIdsRef.current.has(r.id)
+        );
+        if (newWaiting) {
+          seenIdsRef.current.add(newWaiting.id);
+          setIncomingCall(newWaiting);
+        }
+      } catch (e) {
+        if (alive) setError(e.message);
+      }
+    };
     load();
     const t = setInterval(load, 3000);
     return () => {
@@ -40,6 +69,45 @@ function Queue({ auth, onPick }) {
       clearInterval(t);
     };
   }, [auth.token]);
+
+  // Auto-dismiss popup after 30 seconds
+  useEffect(() => {
+    if (!incomingCall) return;
+    const timer = setTimeout(() => setIncomingCall(null), 30000);
+    return () => clearTimeout(timer);
+  }, [incomingCall]);
+
+  // Update title and play gentle ringtone while incoming call popup is visible
+  useEffect(() => {
+    if (!incomingCall) return;
+    const prevTitle = document.title;
+    document.title = '📞 Incoming call – SnapKYC';
+
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const playTone = (freq, start, duration) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime + start);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + start);
+          osc.stop(ctx.currentTime + start + duration);
+        };
+        playTone(660, 0, 0.15);
+        playTone(880, 0.22, 0.22);
+      }
+    } catch {}
+
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [incomingCall]);
 
   async function pick(id) {
     try {
@@ -50,8 +118,6 @@ function Queue({ auth, onPick }) {
     }
   }
 
-  const waitingCustomer = rows.find((r) => r.status === 'waiting') || rows[0];
-
   return (
     <div className="card">
       <div className="row between">
@@ -59,10 +125,6 @@ function Queue({ auth, onPick }) {
         <span className="badge badge-waiting">{rows.length} Waiting</span>
       </div>
       <ErrorBox error={error} />
-
-      {waitingCustomer && (
-        <IncomingCallBanner customer={waitingCustomer} onAccept={pick} />
-      )}
 
       {rows.length === 0 ? (
         <div className="empty-queue-box">
@@ -90,6 +152,17 @@ function Queue({ auth, onPick }) {
           </tbody>
         </table>
       )}
+
+      {incomingCall && (
+        <IncomingCallPopup
+          customer={incomingCall}
+          onAccept={(id) => {
+            setIncomingCall(null);
+            pick(id);
+          }}
+          onDecline={() => setIncomingCall(null)}
+        />
+      )}
     </div>
   );
 }
@@ -99,12 +172,15 @@ function CallConsole({ auth, sessionId, onDone }) {
   const [local, setLocal] = useState(null);
   const [remote, setRemote] = useState(null);
   const [state, setState] = useState('starting');
+  const [route, setRoute] = useState(null);
+  const [customerLeft, setCustomerLeft] = useState(false);
   const [error, setError] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [snapshotUrl, setSnapshotUrl] = useState(null);
   const [recording, setRecording] = useState(false);
-  const [recordingSaved, setRecordingSaved] = useState(false);
+  const [hasRecording, setHasRecording] = useState(false);
+  const [callEnded, setCallEnded] = useState(false);
   const [busy, setBusy] = useState('');
   const [asked, setAsked] = useState({});
   const [note, setNote] = useState('');
@@ -136,7 +212,10 @@ function CallConsole({ auth, sessionId, onDone }) {
     const s = await api(`/api/agent/sessions/${sessionId}`, { token: auth.token });
     setInfo(s);
     if (s.snapshotUrl) setSnapshotUrl(s.snapshotUrl);
-    if (s.recordingUrl) setRecordingSaved(true);
+    if (s.recordingUrl) {
+      setHasRecording(true);
+      setCallEnded(true);
+    }
     return s;
   }, [sessionId, auth.token]);
 
@@ -158,6 +237,8 @@ function CallConsole({ auth, sessionId, onDone }) {
           localStream: stream,
           onRemoteStream: setRemote,
           onState: setState,
+          onRoute: setRoute,
+          onCustomerLeft: () => setCustomerLeft(true),
         });
       } catch (e) {
         setError(e.message);
@@ -173,7 +254,7 @@ function CallConsole({ auth, sessionId, onDone }) {
 
   // Start recording automatically as soon as the customer's video is connected.
   useEffect(() => {
-    if (state !== 'connected' || !remote || !local || recorderRef.current || recordingSaved) return;
+    if (state !== 'connected' || !remote || !local || recorderRef.current || hasRecording || callEnded) return;
     const t = setTimeout(() => {
       try {
         recorderRef.current = startRecording({
@@ -189,7 +270,7 @@ function CallConsole({ auth, sessionId, onDone }) {
       }
     }, 800); // give the video a moment to show its first frame
     return () => clearTimeout(t);
-  }, [state, remote, local, recordingSaved, sessionId, auth.user.id]);
+  }, [state, remote, local, hasRecording, callEnded, sessionId, auth.user.id]);
 
   async function takeSnapshot() {
     setBusy('snapshot');
@@ -227,12 +308,33 @@ function CallConsole({ auth, sessionId, onDone }) {
       stopStream(local);
       setLocal(null);
       setRemote(null);
-      setRecordingSaved(true);
+      setHasRecording(true);
+      setCallEnded(true);
       await load();
     } catch (e) {
       setError(`Could not save the recording: ${e.message}`);
     } finally {
       setBusy('');
+    }
+  }
+
+  async function handleHangUp() {
+    let confirmMsg = 'Are you sure you want to end this call?';
+    if (!snapshotUrl) {
+      confirmMsg =
+        "No face snapshot was taken. Without a snapshot this session can't be recommended, and you will need to return the customer to the queue. End the call anyway?";
+    }
+    if (!window.confirm(confirmMsg)) return;
+
+    if (recorderRef.current) {
+      await endCallAndSave();
+    } else {
+      callRef.current?.endCall();
+      callRef.current?.close();
+      stopStream(local);
+      setLocal(null);
+      setRemote(null);
+      setCallEnded(true);
     }
   }
 
@@ -259,9 +361,22 @@ function CallConsole({ auth, sessionId, onDone }) {
 
   if (!info) return <div className="card"><ErrorBox error={error} /><p className="muted">Loading…</p></div>;
   const p = info.profile;
-  const callLive = !recordingSaved;
-  const statusText =
-    state === 'connected' ? 'Connected' : state === 'peer-left' ? 'Customer disconnected' : state.startsWith('error') ? state : 'Waiting for the customer to connect…';
+  const callLive = !callEnded;
+  const missing = [];
+  if (!snapshotUrl) missing.push('face snapshot');
+  if (!hasRecording) missing.push('recording');
+  const missingText = missing.join(' and ');
+  const canRecommend = callEnded && snapshotUrl && hasRecording;
+
+  const statusText = customerLeft
+    ? 'The customer left the call. End the call to save the recording, then recommend reject, or return the customer to the queue.'
+    : state === 'connected'
+    ? 'Connected'
+    : state === 'peer-left'
+    ? 'Customer disconnected'
+    : state.startsWith('error')
+    ? state
+    : 'Waiting for the customer to connect…';
 
   return (
     <div className="console">
@@ -304,15 +419,9 @@ function CallConsole({ auth, sessionId, onDone }) {
                 onToggleMute={toggleMute}
                 isVideoOff={isVideoOff}
                 onToggleVideo={toggleVideo}
-                onHangUp={() => {
-                  if (!snapshotUrl) {
-                    setError("Please take a face snapshot of the customer before ending the call (required by RBI V-CIP rule).");
-                    return;
-                  }
-                  endCallAndSave();
-                }}
+                onHangUp={handleHangUp}
                 hangUpLabel={busy === 'recording' ? 'Saving…' : 'End & Cut Call'}
-                hangUpDisabled={!recording || busy === 'recording'}
+                hangUpDisabled={busy === 'recording'}
                 isAgent={true}
                 onTakeSnapshot={takeSnapshot}
                 snapshotUrl={snapshotUrl}
@@ -320,17 +429,27 @@ function CallConsole({ auth, sessionId, onDone }) {
                 snapshotDisabled={!remote || state !== 'connected'}
                 state={state}
                 recording={recording}
+                route={route}
               />
             </div>
             <div className="row between call-quick-actions">
               <span className="muted small">
-                {snapshotUrl ? '✓ Face snapshot captured and stored' : '⚠️ Snapshot required before call can be ended'}
+                {snapshotUrl ? '✓ Face snapshot captured and stored' : '⚠️ Snapshot recommended before ending call'}
               </span>
               <button className="btn link" onClick={release}>Return customer to queue</button>
             </div>
           </>
-        ) : (
+        ) : snapshotUrl && hasRecording ? (
           <div className="alert alert-ok">Call ended and recording saved. Now make your recommendation.</div>
+        ) : (
+          <div className="alert alert-error">
+            <p>
+              This session can't be recommended because the {missingText} {missing.length > 1 ? 'are' : 'is'} missing. Return the customer to the queue so the call can be done again.
+            </p>
+            <div style={{ marginTop: '12px' }}>
+              <button className="btn" onClick={release}>Return customer to queue</button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -378,10 +497,25 @@ function CallConsole({ auth, sessionId, onDone }) {
           <h3>Your recommendation</h3>
           <p className="muted small">You are the maker. A different person makes the final decision.</p>
           <textarea rows={3} placeholder="Note for the reviewer (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+          {callEnded && !canRecommend && (
+            <p className="muted small" style={{ color: 'var(--danger, #b42318)' }}>
+              Cannot recommend: {missingText} {missing.length > 1 ? 'are' : 'is'} missing.
+            </p>
+          )}
+          {!callEnded && !snapshotUrl && (
+            <p className="muted small" style={{ color: 'var(--danger, #b42318)' }}>
+              A face snapshot is required to approve.
+            </p>
+          )}
           <div className="row">
-            <button className="btn primary" disabled={!recordingSaved || !!busy} onClick={() => recommend('approve')}>Recommend approve</button>
-            <button className="btn danger" disabled={!recordingSaved || !!busy} onClick={() => recommend('reject')}>Recommend reject</button>
+            <button className="btn primary" disabled={!canRecommend || !!busy} onClick={() => recommend('approve')}>Recommend approve</button>
+            <button className="btn danger" disabled={!canRecommend || !!busy} onClick={() => recommend('reject')}>Recommend reject</button>
           </div>
+          {callEnded && !canRecommend && (
+            <div style={{ marginTop: '12px' }}>
+              <button className="btn" onClick={release}>Return customer to queue</button>
+            </div>
+          )}
         </div>
       </div>
     </div>

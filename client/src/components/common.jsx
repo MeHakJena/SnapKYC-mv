@@ -38,6 +38,7 @@ const ACTION_LABELS = {
   consent_given: 'Consent given',
   location_captured: 'Location captured',
   snapkyc_verified: 'Mock SnapKYC verified',
+  customer_left: 'Customer left the call',
   call_claimed: 'Agent picked up the call',
   call_released: 'Call returned to queue',
   snapshot_taken: 'Face snapshot taken',
@@ -240,6 +241,7 @@ export function CallControlsBar({
   snapshotDisabled = false,
   state = 'starting',
   recording = false,
+  route,
 }) {
   const [callDuration, setCallDuration] = useState(0);
 
@@ -270,7 +272,11 @@ export function CallControlsBar({
           </div>
         )}
         <div className="call-security-badge">
-          🔒 Encrypted V-CIP P2P
+          {route === 'relay'
+            ? '🔒 Encrypted · Relayed via TURN'
+            : route === 'direct'
+            ? '🔒 Encrypted · Direct'
+            : '🔒 Encrypted'}
         </div>
       </div>
 
@@ -325,7 +331,35 @@ export function CallControlsBar({
   );
 }
 
-// Banner showing incoming customer video KYC call for the agent
+// Incoming call phone-like popup card fixed at bottom-right
+export function IncomingCallPopup({ customer, onAccept, onDecline }) {
+  if (!customer) return null;
+  return (
+    <div className="incoming-call-popup" role="alert">
+      <div className="incoming-pulse-icon">
+        <IconPhoneCall />
+        <div className="pulse-ring" />
+      </div>
+      <div className="incoming-call-popup-body">
+        <div className="incoming-tag">Incoming video KYC call</div>
+        <h4 className="incoming-customer-name">{customer.kyc_name || 'Customer'}</h4>
+        <p className="incoming-customer-sub">
+          Session: <code>{customer.id.slice(0, 8)}</code>
+        </p>
+        <div className="incoming-popup-actions">
+          <button type="button" className="btn-accept-popup" onClick={() => onAccept(customer.id)}>
+            Accept
+          </button>
+          <button type="button" className="btn-decline-popup" onClick={onDecline}>
+            Decline
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Banner showing incoming customer video KYC call for the agent (kept for backwards compatibility)
 export function IncomingCallBanner({ customer, onAccept }) {
   if (!customer) return null;
   return (

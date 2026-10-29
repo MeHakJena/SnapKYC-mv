@@ -8,12 +8,51 @@
 import { io } from 'socket.io-client';
 import { api, API_BASE } from './api.js';
 
-export async function startCall({ role, sessionId, auth, localStream, onRemoteStream, onState, onCallEnded }) {
-  const iceServers = await api('/api/ice-servers');
+export async function startCall({
+  role,
+  sessionId,
+  auth,
+  localStream,
+  onRemoteStream,
+  onState,
+  onCallEnded,
+  onRoute,
+  onCustomerLeft,
+}) {
+  const iceServers = await api(`/api/ice-servers?sessionId=${encodeURIComponent(sessionId)}`, {
+    token: auth?.staffToken,
+    secret: auth?.secret,
+  });
   const socket = io(API_BASE || undefined, { auth: { sessionId, ...auth } });
 
   let pc = null;
   let pendingCandidates = [];
+
+  async function checkRoute() {
+    if (!pc) return;
+    try {
+      const stats = await pc.getStats();
+      let selectedPair;
+      stats.forEach((report) => {
+        if (report.type === 'transport' && report.selectedCandidatePairId) {
+          selectedPair = stats.get(report.selectedCandidatePairId);
+        } else if (
+          report.type === 'candidate-pair' &&
+          (report.selected || (report.state === 'succeeded' && report.nominated))
+        ) {
+          selectedPair = report;
+        }
+      });
+      if (selectedPair) {
+        const localCand = stats.get(selectedPair.localCandidateId);
+        if (localCand?.candidateType) {
+          onRoute?.(localCand.candidateType === 'relay' ? 'relay' : 'direct');
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  }
 
   function newPeer() {
     if (pc) pc.close();
@@ -24,7 +63,13 @@ export async function startCall({ role, sessionId, auth, localStream, onRemoteSt
     pc.onicecandidate = (e) => {
       if (e.candidate) socket.emit('signal', { candidate: e.candidate });
     };
-    pc.onconnectionstatechange = () => onState(pc.connectionState);
+    pc.onconnectionstatechange = () => {
+      onState(pc.connectionState);
+      if (pc.connectionState === 'connected') {
+        checkRoute();
+        setTimeout(checkRoute, 1000);
+      }
+    };
     return pc;
   }
 
@@ -78,9 +123,11 @@ export async function startCall({ role, sessionId, auth, localStream, onRemoteSt
   });
 
   socket.on('call-ended', () => onCallEnded?.());
+  socket.on('customer-left', () => onCustomerLeft?.());
 
   return {
     endCall: () => socket.emit('call-ended'),
+    leaveCall: () => socket.emit('customer-left'),
     close: () => {
       if (pc) pc.close();
       socket.disconnect();

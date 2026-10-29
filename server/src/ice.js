@@ -5,12 +5,12 @@ import { config } from './config.js';
 const STUN = { urls: ['stun:stun.l.google.com:19302', 'stun:stun.relay.metered.ca:80'] };
 let cache = { at: 0, servers: null };
 
-export async function getIceServers(debug = false) {
+export async function getIceServers() {
   const t = config.turn;
 
   // Option A: Metered — fetch short-lived TURN credentials with the API key (cached for 1 hour).
   if (t.meteredDomain && t.meteredApiKey) {
-    if (!debug && cache.servers && Date.now() - cache.at < 60 * 60 * 1000) return cache.servers;
+    if (cache.servers && Date.now() - cache.at < 60 * 60 * 1000) return cache.servers;
     const domain = t.meteredDomain.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
     const apiKey = t.meteredApiKey.trim();
     try {
@@ -25,14 +25,6 @@ export async function getIceServers(debug = false) {
       return cache.servers;
     } catch (err) {
       console.warn('[ice] could not fetch Metered TURN credentials:', err.message);
-      if (debug) {
-        return {
-          error: err.message,
-          domain,
-          apiKeyLength: apiKey.length,
-          hint: 'Check if API key matches Metered dashboard Developers tab',
-        };
-      }
     }
   }
 
@@ -51,15 +43,6 @@ export async function getIceServers(debug = false) {
       u.replace(/[a-z0-9_-]+\.metered\.live/i, 'global.relay.metered.ca')
     );
     return [STUN, { urls: normalizedUrls, username: t.username, credential: t.credential }];
-  }
-
-  if (debug) {
-    return {
-      error: 'TURN credentials not active',
-      meteredDomainSet: Boolean(t.meteredDomain),
-      meteredApiKeySet: Boolean(t.meteredApiKey),
-      staticTurnSet: Boolean(t.urls && t.username && t.credential),
-    };
   }
 
   // No TURN: works on the same network, may fail across networks.

@@ -80,6 +80,12 @@ customerRouter.post('/sessions/:id/snapkyc', loadOwnSession, async (req, res) =>
   res.json({ name: d.name, dob: d.dob, photo: d.photo, idLast4: d.id_last4, ref: d.ref });
 });
 
+// Customer left the call early without completing the review.
+customerRouter.post('/sessions/:id/leave', loadOwnSession, async (req, res) => {
+  await logEvent(req.session.id, 'customer', null, 'customer_left');
+  res.json({ ok: true });
+});
+
 // Status poll: what the customer sees (waiting, in review, rejected + reason, or the token).
 customerRouter.get('/sessions/:id', loadOwnSession, async (req, res) => {
   const s = req.session;

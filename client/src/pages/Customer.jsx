@@ -74,10 +74,11 @@ export default function Customer() {
       )}
       {step === 'snapkyc' && saved && <SnapkycStep saved={saved} onDone={() => setStep('call')} />}
       {step === 'call' && saved && (
-        <CallStep saved={saved} onFinished={finishCall} refresh={refresh} />
+        <CallStep saved={saved} onFinished={finishCall} onLeft={() => setStep('left')} refresh={refresh} />
       )}
+      {step === 'left' && <LeftStep onRejoin={() => setStep('call')} onRestart={restart} refresh={refresh} />}
       {step === 'result' && session && <ResultStep session={session} onRestart={restart} />}
-      {saved && step !== 'result' && (
+      {saved && !['result', 'left'].includes(step) && (
         <p className="muted small center">
           <button className="btn link" onClick={restart}>Start over</button>
         </p>
@@ -88,7 +89,8 @@ export default function Customer() {
 
 function Stepper({ step }) {
   const steps = [['consent', 'Consent & location'], ['snapkyc', 'SnapKYC check'], ['call', 'Video call'], ['result', 'Result']];
-  const idx = steps.findIndex(([k]) => k === step);
+  const activeKey = step === 'left' ? 'call' : step;
+  const idx = steps.findIndex(([k]) => k === activeKey);
   return (
     <ol className="stepper">
       {steps.map(([k, label], i) => (
@@ -213,10 +215,11 @@ function SnapkycStep({ saved, onDone }) {
   );
 }
 
-function CallStep({ saved, onFinished, refresh }) {
+function CallStep({ saved, onFinished, onLeft, refresh }) {
   const [local, setLocal] = useState(null);
   const [remote, setRemote] = useState(null);
   const [state, setState] = useState('starting');
+  const [route, setRoute] = useState(null);
   const [error, setError] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
@@ -237,6 +240,7 @@ function CallStep({ saved, onFinished, refresh }) {
           localStream: stream,
           onRemoteStream: setRemote,
           onState: setState,
+          onRoute: setRoute,
           onCallEnded: () => onFinished(),
         });
       } catch (err) {
@@ -278,12 +282,18 @@ function CallStep({ saved, onFinished, refresh }) {
     setIsVideoOff(next);
   };
 
-  const handleHangUp = () => {
-    if (window.confirm('Are you sure you want to hang up / leave this video KYC call?')) {
-      callRef.current?.endCall();
+  const handleHangUp = async () => {
+    if (window.confirm('Are you sure you want to leave this video KYC call?')) {
+      try {
+        await api(`/api/customer/sessions/${saved.sessionId}/leave`, {
+          method: 'POST',
+          secret: saved.secret,
+        });
+      } catch {}
+      callRef.current?.leaveCall();
       callRef.current?.close();
       stopStream(local);
-      onFinished();
+      onLeft();
     }
   };
 
@@ -334,11 +344,48 @@ function CallStep({ saved, onFinished, refresh }) {
           onHangUp={handleHangUp}
           hangUpLabel="Leave Call"
           state={state}
+          route={route}
         />
       </div>
       <p className="muted small center">
         Keep your face clearly visible and your dummy ID card ready. The officer will ask you a few questions.
       </p>
+    </div>
+  );
+}
+
+function LeftStep({ onRejoin, onRestart, refresh }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleRejoin() {
+    setBusy(true);
+    setError('');
+    const s = await refresh();
+    setBusy(false);
+    if (s && ['waiting', 'in_call'].includes(s.status)) {
+      onRejoin();
+    } else {
+      setError(
+        s?.status === 'approved' || s?.status === 'rejected'
+          ? 'This session has already been decided by the reviewer.'
+          : 'This session is no longer waiting for a call.'
+      );
+    }
+  }
+
+  return (
+    <div className="card narrow center">
+      <div className="big-icon bad">⏏</div>
+      <h2>You left the call</h2>
+      <p className="muted">You disconnected from the video KYC call before it was completed.</p>
+      <ErrorBox error={error} />
+      <div className="row center">
+        <button className="btn primary" onClick={handleRejoin} disabled={busy}>
+          {busy ? 'Checking session…' : 'Rejoin call'}
+        </button>
+        <button className="btn" onClick={onRestart}>Start over</button>
+      </div>
     </div>
   );
 }

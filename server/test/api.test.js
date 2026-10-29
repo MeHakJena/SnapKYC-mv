@@ -110,3 +110,49 @@ test('another customer cannot read a session without its secret', async () => {
   const res = await request(app).get(`/api/customer/sessions/${create.body.sessionId}`).set('x-session-secret', 'wrong');
   assert.equal(res.status, 404);
 });
+
+test('/api/ice-servers requires an active session or staff token', async () => {
+  // Without credentials -> 401
+  const unauth = await request(app).get('/api/ice-servers');
+  assert.equal(unauth.status, 401);
+  assert.equal(unauth.body.error, 'Join a session first');
+
+  // With a staff token -> 200 and an array
+  const staff = await loginAs('agent1');
+  const asStaff = await request(app).get('/api/ice-servers').set('Authorization', staff);
+  assert.equal(asStaff.status, 200);
+  assert.ok(Array.isArray(asStaff.body));
+
+  // With a customer session secret -> 200 and an array
+  const create = await request(app).post('/api/customer/sessions').send({ consent: true, location: { lat: 12.97, lng: 77.59 } });
+  const { sessionId, secret } = create.body;
+  const asCustomer = await request(app)
+    .get(`/api/ice-servers?sessionId=${sessionId}`)
+    .set('x-session-secret', secret);
+  assert.equal(asCustomer.status, 200);
+  assert.ok(Array.isArray(asCustomer.body));
+});
+
+test('customer leave logs customer_left event and keeps session status unchanged', async () => {
+  const create = await request(app).post('/api/customer/sessions').send({ consent: true, location: { lat: 12.97, lng: 77.59 } });
+  const { sessionId, secret } = create.body;
+
+  // Wrong secret -> 404
+  const bad = await request(app).post(`/api/customer/sessions/${sessionId}/leave`).set('x-session-secret', 'wrong-secret');
+  assert.equal(bad.status, 404);
+
+  // Own session -> 200, status unchanged
+  const ok = await request(app).post(`/api/customer/sessions/${sessionId}/leave`).set('x-session-secret', secret);
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.ok, true);
+
+  // Status remains consented
+  const check = await request(app).get(`/api/customer/sessions/${sessionId}`).set('x-session-secret', secret);
+  assert.equal(check.body.status, 'consented');
+
+  // Event logged in audit trail
+  const reviewer = await loginAs('reviewer1');
+  const detail = await request(app).get(`/api/reviewer/sessions/${sessionId}`).set('Authorization', reviewer);
+  const actions = detail.body.events.map((e) => e.action);
+  assert.ok(actions.includes('customer_left'));
+});

@@ -59,6 +59,11 @@ export function attachSignaling(httpServer) {
       if (role === 'agent') socket.to(room).emit('call-ended');
     });
 
+    // Customer leaves the call early.
+    socket.on('customer-left', () => {
+      if (role === 'customer') socket.to(room).emit('customer-left');
+    });
+
     socket.on('disconnect', () => socket.to(room).emit('peer-left', role));
   });
 

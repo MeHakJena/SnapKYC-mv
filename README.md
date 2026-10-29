@@ -73,7 +73,7 @@ Needs Node 20+. No accounts needed: without env vars it uses an in-memory databa
 npm run install:all
 npm run dev:server        # terminal 1 -> http://localhost:4000
 npm run dev:client        # terminal 2 -> open http://localhost:5173
-npm test                  # 11 tests, incl. maker-checker
+npm test                  # 14 tests, incl. maker-checker
 ```
 
 Local demo password is `demo123`. Use separate tabs/windows for customer, agent and reviewer (logins are per tab).
@@ -99,6 +99,16 @@ Frontend on Vercel instead: deploy `client/` with `VITE_API_URL=<render url>` an
 - **India check is a bounding box** on browser GPS; GPS can be spoofed and there is no IP cross-check.
 - **Recording happens in the agent's browser**: if the agent's tab crashes mid-call the recording is lost.
 - **No face match** (nice-to-have not done): the reviewer compares the snapshot and photo by eye.
+- **TURN credentials are static in this deployment**: production would use Metered's API mode for short-lived credentials.
+
+## Changes after first build
+
+- **TURN fix**: routed static TURN URLs directly to Metered's global media relay servers (`global.relay.metered.ca`).
+- **Protected ICE servers**: `/api/ice-servers` requires an active session secret or staff login; public debug mode removed.
+- **Customer leave flow**: leaving a call shows a dedicated status screen with options to rejoin or start over without false "under review" statuses.
+- **Agent can end call anytime**: KYC officers can cleanly end calls at any stage with confirmation dialogs and guidance.
+- **Incoming call popup**: phone-like notification card for newly waiting customers with gentle ringtone and auto-dismiss.
+- **Encrypted route badge**: WebRTC stats detect whether calls connect directly ("🔒 Encrypted · Direct") or via TURN ("🔒 Encrypted · Relayed via TURN").
 
 ## What I would do next
 

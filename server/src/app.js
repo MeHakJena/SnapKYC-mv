@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import { config } from './config.js';
-import { login, USERS } from './auth.js';
+import { login, USERS, verifyStaffToken, customerOwnsSession } from './auth.js';
+import { getSession } from './db.js';
 import { checkKycToken } from './kycToken.js';
 import { mockSnapkycResponse, isValidDummyId } from './mockSnapkyc.js';
 import { getIceServers } from './ice.js';
@@ -41,8 +42,29 @@ export function createApp() {
   // Public: is this KYC token genuine and unexpired?
   app.post('/api/verify', (req, res) => res.json(checkKycToken(req.body?.token)));
 
-  // WebRTC relay settings (needed by both customer and agent).
-  app.get('/api/ice-servers', async (req, res) => res.json(await getIceServers(Boolean(req.query.debug))));
+  // WebRTC relay settings (only for participants in a session).
+  app.get('/api/ice-servers', async (req, res) => {
+    const authHeader = req.headers.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+      try {
+        verifyStaffToken(authHeader.slice(7));
+        return res.json(await getIceServers());
+      } catch {
+        // Not a valid staff token, check customer credentials below
+      }
+    }
+
+    const sessionId = req.headers['x-session-id'] || req.query.sessionId;
+    const secret = req.headers['x-session-secret'] || req.query.secret;
+    if (sessionId && secret) {
+      const session = await getSession(sessionId);
+      if (customerOwnsSession(session, secret)) {
+        return res.json(await getIceServers());
+      }
+    }
+
+    return res.status(401).json({ error: 'Join a session first' });
+  });
 
   // Local-storage mode only: serve a file through a short-lived signed link.
   app.get('/api/media', async (req, res) => {

@@ -398,6 +398,89 @@ video.recording { width: 100%; border-radius: 10px; background: #000; margin-bot
   background: #059669;
   transform: scale(1.03);
 }
+
+/* Incoming Call Popup fixed at bottom-right */
+.incoming-call-popup {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15), 0 4px 6px rgba(15, 23, 42, 0.05);
+  animation: slideInPopup 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 360px;
+}
+@keyframes slideInPopup {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.incoming-call-popup .incoming-pulse-icon {
+  width: 40px;
+  height: 40px;
+  background: #10b981;
+}
+.incoming-call-popup-body {
+  flex: 1;
+}
+.incoming-call-popup .incoming-tag {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: #059669;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.incoming-call-popup .incoming-customer-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text, #1e293b);
+}
+.incoming-call-popup .incoming-customer-sub {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted, #64748b);
+}
+.incoming-popup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.btn-accept-popup {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btn-accept-popup:hover {
+  background: #059669;
+}
+.btn-decline-popup {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btn-decline-popup:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
 .btn-pick-call {
   background: var(--accent);
   color: #fff;
